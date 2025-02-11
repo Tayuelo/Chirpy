@@ -1,6 +1,8 @@
 package main
 
 import (
+	"chirpy/internal/auth"
+	"chirpy/internal/database"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -13,11 +15,13 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
+	Password  string    `json:"-"`
 }
 
 func (cfg *apiConfig) handlerUsers(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Email string `json:"email"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 	type response struct {
 		User
@@ -31,7 +35,16 @@ func (cfg *apiConfig) handlerUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := cfg.queries.CreateUser(r.Context(), payload.Email)
+	hash, err := auth.HashPassword(payload.Password)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "error hashing password: %w", err)
+		return
+	}
+
+	user, err := cfg.queries.CreateUser(r.Context(), database.CreateUserParams{
+		Email:          payload.Email,
+		HashedPassword: hash,
+	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "error creating user: %w", err)
 		return
