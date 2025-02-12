@@ -2,61 +2,52 @@ package main
 
 import (
 	"chirpy/internal/auth"
-	"errors"
 	"net/http"
 	"time"
 )
 
 func (cfg *apiConfig) handlerRefresh(w http.ResponseWriter, r *http.Request) {
-	bearer, err := auth.GetBearerToken(r.Header)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, err.Error(), err)
-		return
-	}
-
-	refreshToken, err := cfg.queries.GetUserFromRefreshToken(r.Context(), bearer)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, err.Error(), err)
-		return
-	}
-
-	if refreshToken.ExpiresAt.Before(time.Now()) {
-		errMessage := "token expired or revoked"
-		respondWithError(w, http.StatusUnauthorized, errMessage, errors.New(errMessage))
-		return
-	}
-
-	if refreshToken.RevokedAt.Valid {
-		errMessage := "token expired or revoked"
-		respondWithError(w, http.StatusUnauthorized, errMessage, errors.New(errMessage))
-		return
-	}
-
-	token, err := auth.MakeJWT(refreshToken.UserID, cfg.jwtSecret, accessTokenExpirationTime)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err.Error(), err)
-		return
-	}
-
 	type response struct {
 		Token string `json:"token"`
 	}
 
+	refreshToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Couldn't find token", err)
+		return
+	}
+
+	user, err := cfg.queries.GetUserFromRefreshToken(r.Context(), refreshToken)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Couldn't get user for refresh token", err)
+		return
+	}
+
+	accessToken, err := auth.MakeJWT(
+		user.ID,
+		cfg.jwtSecret,
+		time.Hour,
+	)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Couldn't validate token", err)
+		return
+	}
+
 	respondWithJSON(w, http.StatusOK, response{
-		Token: token,
+		Token: accessToken,
 	})
 }
 
 func (cfg *apiConfig) handlerRevoke(w http.ResponseWriter, r *http.Request) {
-	bearer, err := auth.GetBearerToken(r.Header)
+	refreshToken, err := auth.GetBearerToken(r.Header)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, err.Error(), err)
+		respondWithError(w, http.StatusBadRequest, "Couldn't find token", err)
 		return
 	}
 
-	_, err = cfg.queries.RevokeRefreshToken(r.Context(), bearer)
+	_, err = cfg.queries.RevokeRefreshToken(r.Context(), refreshToken)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err.Error(), err)
+		respondWithError(w, http.StatusInternalServerError, "Couldn't revoke session", err)
 		return
 	}
 

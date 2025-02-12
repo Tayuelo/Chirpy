@@ -56,7 +56,7 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = cfg.queries.SaveRefreshToken(r.Context(), database.SaveRefreshTokenParams{
+	_, err = cfg.queries.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
 		Token:     refreshToken,
 		UserID:    user.ID,
 		ExpiresAt: time.Now().UTC().AddDate(0, 0, 60),

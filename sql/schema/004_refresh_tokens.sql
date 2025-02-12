@@ -1,5 +1,5 @@
 -- +goose Up
-CREATE TABLE refresh_tokens(
+CREATE TABLE refresh_tokens (
     token TEXT PRIMARY KEY,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL,
