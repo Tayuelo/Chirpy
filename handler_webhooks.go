@@ -1,6 +1,7 @@
 package main
 
 import (
+	"chirpy/internal/auth"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -17,9 +18,20 @@ func (cfg *apiConfig) handlerPolkaWehbook(w http.ResponseWriter, r *http.Request
 		} `json:"data"`
 	}
 
+	apiKey, err := auth.GetAPIKey(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, err.Error(), err)
+		return
+	}
+
+	if apiKey != cfg.apiKey {
+		respondWithError(w, http.StatusUnauthorized, "Incorrect apikey", err)
+		return
+	}
+
 	payload := parameters{}
 	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&payload)
+	err = decoder.Decode(&payload)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, err.Error(), err)
 		return

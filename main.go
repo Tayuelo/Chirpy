@@ -39,6 +39,7 @@ func main() {
 		queries:        dbQueries,
 		platform:       os.Getenv("PLATFORM"),
 		jwtSecret:      os.Getenv("JWT_SECRET"),
+		apiKey:         os.Getenv("POLKA_KEY"),
 	}
 
 	mux := http.NewServeMux()
