@@ -3,6 +3,7 @@ package main
 import (
 	"chirpy/internal/database"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,6 +19,7 @@ type Chirp struct {
 
 func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 	authorID := r.URL.Query().Get("author_id")
+	sortDirection := r.URL.Query().Get("sort")
 	var chirps []database.Chirp
 	var err error
 
@@ -38,10 +40,10 @@ func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, MapChirps(chirps))
+	respondWithJSON(w, http.StatusOK, MapChirps(chirps, sortDirection))
 }
 
-func MapChirps(chirps []database.Chirp) []Chirp {
+func MapChirps(chirps []database.Chirp, sortDirection string) []Chirp {
 	slc := make([]Chirp, len(chirps))
 
 	for i, chirp := range chirps {
@@ -53,6 +55,13 @@ func MapChirps(chirps []database.Chirp) []Chirp {
 			UserID:    chirp.UserID,
 		}
 	}
+
+	sort.Slice(slc, func(i, j int) bool {
+		if sortDirection == "desc" {
+			return slc[i].CreatedAt.After(slc[j].CreatedAt)
+		}
+		return slc[i].CreatedAt.Before(slc[j].CreatedAt)
+	})
 
 	return slc
 }
