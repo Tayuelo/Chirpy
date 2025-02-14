@@ -1,4 +1,4 @@
-# Go Server
+# Chirpy Go Server
 
 ## Overview
 This is a Go-based web server that serves static files, handles user authentication, manages chirps (short messages), and provides administrative metrics.
